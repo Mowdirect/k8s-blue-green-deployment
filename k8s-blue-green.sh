@@ -5,7 +5,7 @@ healthcheck(){
     echo "[DEPLOY INFO] Starting Heathcheck"
 
     h=true
-    
+
     #Start custom healthcheck
     output=$(kubectl get pods -l version="$NEW_VERSION" -n $NAMESPACE --no-headers)
     echo "Got $output"
@@ -30,7 +30,7 @@ healthcheck(){
 
 cancel(){
     echo "[DEPLOY FAILED] Removing new color"
-    
+
     kubectl delete deployment $DEPLOYMENT_NAME-$NEW_VERSION --namespace=${NAMESPACE}
 
     exit 1
@@ -38,18 +38,19 @@ cancel(){
 
 
 mainloop(){
-   
+
     echo "[DEPLOY INFO] Selecting Kubernetes cluster"
+    kubectl config get-contexts
     kubectl config use-context "${KUBE_CONTEXT}"
 
     echo "[DEPLOY INFO] Locating current version"
-    CURRENT_VERSION=$(kubectl get service $SERVICE_NAME -o=jsonpath='{.spec.selector.version}' --namespace=${NAMESPACE}) 
+    CURRENT_VERSION=$(kubectl get service $SERVICE_NAME -o=jsonpath='{.spec.selector.version}' --namespace=${NAMESPACE})
 
     if [ "$CURRENT_VERSION" == "$NEW_VERSION" ]; then
        echo "[DEPLOY NOP] NEW_VERSION is same as CURRENT_VERSION. Both are at $CURRENT_VERSION"
        exit 0
-    fi    
-    
+    fi
+
     echo "[DEPLOY NEW COLOR] Creating next version"
     kubectl get deployment $DEPLOYMENT_NAME-$CURRENT_VERSION -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$NEW_VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
 
@@ -62,12 +63,12 @@ mainloop(){
     healthcheck
 
     echo "[DEPLOY SWITCH] Routing traffic to new color"
-    kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$NEW_VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f - 
-     
+    kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$NEW_VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
+
 
     echo "[DEPLOY CLEANUP] Removing previous color"
-    kubectl delete deployment $DEPLOYMENT_NAME-$CURRENT_VERSION --namespace=${NAMESPACE} 
-   
+    kubectl delete deployment $DEPLOYMENT_NAME-$CURRENT_VERSION --namespace=${NAMESPACE}
+
 }
 
 if [ "$1" != "" ] && [ "$2" != "" ] && [ "$3" != "" ] && [ "$4" != "" ] && [ "$5" != "" ] && [ "$6" != "" ]; then
@@ -78,7 +79,7 @@ if [ "$1" != "" ] && [ "$2" != "" ] && [ "$3" != "" ] && [ "$4" != "" ] && [ "$5
     HEALTH_SECONDS=$5
     NAMESPACE=$6
 else
-    
+
     echo "USAGE\n k8s-blue-green-rollout.sh [SERVICE_NAME] [DEPLOYMENT_NAME] [NEW_VERSION] [HEALTH_COMMAND] [HEALTH_SECONDS] [NAMESPACE]"
     echo "\t [SERVICE_NAME] - Name of the current service"
     echo "\t [DEPLOYMENT_NAME] - The name of the current deployment"
