@@ -40,6 +40,7 @@ cancel(){
 mainloop(){
 
     echo "[DEPLOY INFO] Selecting Kubernetes cluster"
+    kubectl version
     kubectl config get-contexts
     kubectl config use-context "${KUBE_CONTEXT}"
 
@@ -51,10 +52,10 @@ mainloop(){
        exit 0
     fi
 
-    echo "[DEPLOY NEW COLOR] Creating next version"
+    echo "[DEPLOY $DEPLOYMENT_NAME-$NEW_VERSION in ${NAMESPACE}] replacing $DEPLOYMENT_NAME-$CURRENT_VERSION"
     kubectl get deployment $DEPLOYMENT_NAME-$CURRENT_VERSION -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$NEW_VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
 
-    echo "[DEPLOY INFO] Waiting for new color to come up"
+    echo "[DEPLOY INFO] Waiting for $DEPLOYMENT_NAME-$NEW_VERSION to come up"
     kubectl rollout status deployment/$DEPLOYMENT_NAME-$NEW_VERSION --namespace=${NAMESPACE}
 
     echo "[DEPLOY INFO] Waiting for $HEALTH_SECONDS seconds before healthcheck"
@@ -62,7 +63,7 @@ mainloop(){
 
     healthcheck
 
-    echo "[DEPLOY SWITCH] Routing traffic to new color"
+    echo "[DEPLOY SERVICE SWITCH $SERVICE_NAME] Routing traffic to new color"
     kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$NEW_VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
 
 
